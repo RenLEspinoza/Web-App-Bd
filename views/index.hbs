@@ -1,0 +1,27 @@
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{titulo}}</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+
+    <div class="container">
+      <h1>{{titulo}}</h1>
+      <h2>{{mensaje}}</h2>
+
+      <p>Estado del servidor: {{{statusBadge estado}}}</p>
+      <p>Acceso registrado el: <em>{{fecha}}</em></p>
+
+      <hr />
+
+      <nav>
+        <a href="/">Inicio</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/status">Ver Estado JSON</a>
+      </nav>
+    </div>
+
+  </body>
+</html>
