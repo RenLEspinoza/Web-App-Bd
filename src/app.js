@@ -35,14 +35,4 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 // Conexión de Router principal
 app.use("/", routes);
 
-// Inicia el servidor y escucha en el puerto configurado
-app.listen(PORT, () => {
-  registrarAcceso(
-    `Servidor iniciado exitosamente`,
-    `INICIO_SISTEMA`,
-    `PUERTO: ${PORT}`,
-  );
-  console.log(`Servidor iniciado en http://localhost:${PORT}`);
-});
-
 module.exports = app;

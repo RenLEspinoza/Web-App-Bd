@@ -30,7 +30,7 @@ async function mostrarSaldos(mensaje) {
   });
 }
 
-// Función
+// Función para validar datos de transferencia
 function validarDatosTransferencia(idOrigen, idDestino, monto) {
   if (monto <= 0) {
     throw new Error("El monto debe ser mayor a cero");
@@ -43,6 +43,7 @@ function validarDatosTransferencia(idOrigen, idDestino, monto) {
   }
 }
 
+// Función asincrona para realizar reintentos
 async function reintento(queryText, values, intentos = 3, delay = 2000) {
   for (let i = 1; i <= intentos; i++) {
     try {
@@ -70,18 +71,20 @@ async function ejecutarConReintentos(
   let intento = 0;
   let delay = delayMs;
 
+  // Bucle de control de intentos
   while (intento < maxReintentos) {
-    intento++;
+    // Se ejecuta mientras no se alcance el limite de reintentos.
+    intento++; // Incrementa el contador de intentos en cada ciclo.
     try {
-      return await operacion();
+      return await operacion(); // Si la operación tiene exito, devuelve el resultado y finaliza la función.
     } catch (error) {
-      // 1. Si es un error de validación/negocio, se interrumpe inmediatamente
+      // Si es un error de validación/negocio, se interrumpe inmediatamente.
       if (error instanceof ValidationError) {
         console.error(`[Error de Negocio]: ${error.message}`);
         throw error;
       }
 
-      // 2. Verificar si es un error de conexión o bloqueo reintentable
+      // Verifica si es un error de conexión o bloqueo reintentable
       const esReintentable =
         CODIGOS_REINTENTABLES.includes(error.code) ||
         CODIGOS_REINTENTABLES.includes(error.errno);
@@ -91,7 +94,7 @@ async function ejecutarConReintentos(
           `[Intento ${intento}/${maxReintentos}] Error de BD (${error.code || error.message}). Reintentando en ${delay}ms...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
-        delay *= 2; // Backoff exponencial
+        delay *= 2; // Backoff exponencial / Duplica el tiempo de espera de forma exponencial para no saturar el servidor o la BD. (1s -> 2s -> 4s)
       } else {
         console.error(
           `[Error Definitivo]: Operación fallida tras ${intento} intento(s). Motivo: ${error.message}`,
@@ -102,6 +105,7 @@ async function ejecutarConReintentos(
   }
 }
 
+// Funcion para transferir dinero
 async function transferirDinero(idOrigen, idDestino, monto) {
   const client = await pool.connect();
   try {
@@ -168,6 +172,12 @@ async function transferirDinero(idOrigen, idDestino, monto) {
     await client.query("ROLLBACK");
     console.error(`Error en la transferencia: ${error.message}`);
     console.error("Se ejecutó el ROLLBACK - ningún cambio se aplicó");
+
+    registrarErrorTransaccion("Transferencia de Fondos", error.message, {
+      cuentaOrigen: 1,
+      cuentaDestino: 2,
+      monto: 150000,
+    });
   } finally {
     // Liberar la conexión devuelta al pool
     client.release();
@@ -175,6 +185,6 @@ async function transferirDinero(idOrigen, idDestino, monto) {
 }
 
 // Demo de transferencias
-ejecutarConReintentos(() => transferirDinero(2, 1, 50))
+ejecutarConReintentos(() => transferirDinero(1, 2, 50))
   .then(() => console.log("Proceso finalizado."))
   .catch((err) => console.error("Proceso abortado por error no recuperable."));
