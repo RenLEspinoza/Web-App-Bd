@@ -1,3 +1,5 @@
+const pool = require("../config/db");
+
 const registrarHelpers = (hbs) => {
   hbs.registerHelper("statusBadge", function (estado) {
     if (estado === "OK" || estado === "Operativo") {

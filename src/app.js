@@ -1,38 +1,34 @@
-// Carga las variables de entorno desde el archivo .env
+// Carga de variables y módulos
 require("dotenv").config();
-
-// Importa el módulo de express
 const express = require("express");
-
-// Importa el módulo nativo path
 const path = require("path");
-
-// Importa routes
-const routes = require("../routes/router");
-
-// LLamo a la función desde /loggerMiddleware
-const { registrarAcceso } = require("../middlewares/loggerMiddleware");
-
 const hbs = require("hbs");
 
-// Importar el helper para status
+// Importación de middlewares y helpers
 const { registrarHelpers } = require("../helpers/hbHelpers");
-registrarHelpers(hbs);
 
-// Inicializa la aplicación de Express
+// INICIALIZAR EXPRESS PRIMERO
 const app = express();
 
-// Define el puerto desde process.env (o usa 3000 como respaldo)
-const PORT = process.env.PORT || 3000;
+// Middlewares de datos (JSON/Formularios) y logger
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Configura Handlebars (hbs) como motor de plantillas
+// Configurar motor de plantillas (Handlebars)
+registrarHelpers(hbs);
 app.set("view engine", "hbs");
 app.set("views", path.join(__dirname, "..", "views"));
 
-// Middleware para servir archivos estáticos (CSS, JS, imágenes) desde /public
+// Archivos estáticos
 app.use(express.static(path.join(__dirname, "..", "public")));
 
-// Conexión de Router principal
-app.use("/", routes);
+// Rutas
+const appRouter = require("../routes/router");
+const userRoutes = require("../routes/userRoutes");
+const transferRoutes = require("../routes/transferRoutes");
+
+app.use("/", appRouter);
+app.use("/usuarios", userRoutes);
+app.use("/transfers", transferRoutes);
 
 module.exports = app;
