@@ -1,0 +1,1 @@
+[2026-09-03T22:29:46.445Z] ERROR TRANSACCIONAL: llave duplicada viola restricción de unicidad «usuarios_email_key»

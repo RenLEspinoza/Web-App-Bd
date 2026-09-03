@@ -1,11 +1,13 @@
 const pool = require("../config/db");
+const { registrarUsuarioConCuenta } = require("../services/userService");
 
-// Operaciones CRUD para U
+// Operaciones CRUD para usuario
 
-// (CREATE) Crear un usuario nuevo
+// (CREATE) Crear un usuario nuevo (modificación: ahora también crea una cuenta con saldo inicial (L4))
 const crearUsuario = async (req, res) => {
-  const { nombre, email } = req.body;
+  const { nombre, email, phone_number, password_hash, saldoInicial } = req.body;
 
+  // 1. Validación de campos obligatorios para el usuario
   if (!nombre || !email) {
     return res.status(400).json({
       error: "Nombre y email son requeridos",
@@ -13,17 +15,25 @@ const crearUsuario = async (req, res) => {
   }
 
   try {
-    const query =
-      "INSERT INTO usuarios (nombre, email) VALUES ($1, $2) RETURNING id;";
-    const values = [nombre, email];
-    const result = await pool.query(query, values);
+    // 2. Invocar el servicio que maneja la transacción (BEGIN - INSERT USUARIOS - INSERT CUENTAS - COMMIT)
+    const resultado = await registrarUsuarioConCuenta(
+      { nombre, email, phone_number, password_hash },
+      saldoInicial || 0,
+    );
 
+    // 3. Respuesta de éxito
     res.status(201).json({
-      mensaje: "Usuario insertado",
-      id: result.rows[0].id,
+      mensaje: "Usuario y cuenta creados exitosamente",
+      usuarioId: resultado.usuario.id,
+      cuentaId: resultado.cuenta.id,
+      saldo: resultado.cuenta.saldo,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    // 4. Si la transacción hace ROLLBACK en el servicio, el catch captura el error aquí
+    res.status(500).json({
+      error: "Error al procesar la transacción de registro",
+      detalle: error.message,
+    });
   }
 };
 

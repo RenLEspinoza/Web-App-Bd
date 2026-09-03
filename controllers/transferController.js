@@ -1,17 +1,6 @@
 const pool = require("../config/db");
 const { validarDatosTransferencia } = require("../helpers/validators");
 
-// Funcion auxiliar para mostrar saldo
-async function mostrarSaldos(mensaje) {
-  const result = await pool.query(
-    "SELECT id, nombre, saldo FROM cuentas ORDER BY id;",
-  );
-  console.log(mensaje);
-  result.rows.forEach((cuenta) => {
-    console.log(`[ID ${cuenta.id} ${cuenta.nombre} ${cuenta.saldo}]`);
-  });
-}
-
 // Funcion para transferir dinero
 async function transferirDinero(idOrigen, idDestino, monto) {
   const client = await pool.connect();
@@ -23,9 +12,12 @@ async function transferirDinero(idOrigen, idDestino, monto) {
 
     await client.query("BEGIN"); // Inicia transacción
 
-    // 2. Obtiene y bloquea la cuenta de origen
+    // Obtiene y bloquea la cuenta de origen
     const cuentaOrigenRes = await client.query(
-      "SELECT nombre, saldo FROM cuentas WHERE id = $1 FOR UPDATE;",
+      `SELECT c.saldo, u.nombre 
+       FROM cuentas c 
+       JOIN usuarios u ON c.usuario_id = u.id 
+       WHERE c.id = $1 FOR UPDATE;`,
       [idOrigen],
     );
     // Si la cuenta no existe arroja error
@@ -36,22 +28,28 @@ async function transferirDinero(idOrigen, idDestino, monto) {
     // Obtiene el saldo disponible
     const saldoDisponible = parseFloat(cuentaOrigenRes.rows[0].saldo);
 
-    // 3. Si el saldo es insuficiente arroja error con el detalle
+    // Si el saldo es insuficiente arroja error con el detalle
     if (saldoDisponible < monto) {
       throw new Error(
         `Fondos insuficientes. Saldo disponible: $${saldoDisponible}, intento de transferencia: $${monto}`,
       );
     }
 
-    // 4. Débito: Si pasa las validaciones, Descuenta el monto de la cuenta de origen
+    // Débito: Si pasa las validaciones, Descuenta el monto de la cuenta de origen
     const debito = await client.query(
-      "UPDATE cuentas SET saldo = saldo - $1 WHERE id = $2 RETURNING nombre, saldo;",
+      `UPDATE cuentas SET saldo = saldo - $1 WHERE id = $2 RETURNING u.nombre, c.saldo 
+       FROM cuentas c 
+       JOIN usuarios u ON c.usuario_id = u.id 
+       WHERE c.id = $2;`,
       [monto, idOrigen],
     );
 
-    // 5. Crédito: Suma el monto a la cuenta de destino
+    // Crédito: Suma el monto a la cuenta de destino
     const credito = await client.query(
-      "UPDATE cuentas SET saldo = saldo + $1 WHERE id = $2 RETURNING nombre, saldo;",
+      `UPDATE cuentas SET saldo = saldo + $1 WHERE id = $2 RETURNING u.nombre, c.saldo 
+       FROM cuentas c 
+       JOIN usuarios u ON c.usuario_id = u.id 
+       WHERE c.id = $2;`,
       [monto, idDestino],
     );
 
@@ -71,11 +69,13 @@ async function transferirDinero(idOrigen, idDestino, monto) {
     );
     console.log("Transferencia realizada con éxito (COMMIT)");
     return {
+      exito: true,
+      mensaje: "Transferencia realizada con éxito",
       origen: debito.rows[0],
       destino: credito.rows[0],
     };
   } catch (error) {
-    // Si ocurre cualquier error, se revierten las operaciones
+    // Si ocurre cualquier error en la transacción, se revierten las operaciones
     await client.query("ROLLBACK");
     console.error(`Error en la transferencia: ${error.message}`);
     console.error("Se ejecutó el ROLLBACK - ningún cambio se aplicó");
@@ -87,5 +87,4 @@ async function transferirDinero(idOrigen, idDestino, monto) {
 
 module.exports = {
   transferirDinero,
-  mostrarSaldos,
 };
