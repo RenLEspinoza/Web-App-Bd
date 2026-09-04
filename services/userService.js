@@ -57,7 +57,7 @@ async function registrarUsuarioConCuenta(datosUsuario, saldoInicial) {
       console.error("Error al ejecutar ROLLBACK:", rollbackErr.message);
     }
 
-    // Registrar en archivo error.txt (Tarea PLUS)
+    // Registrar en archivo error.txt
     registrarErrorEnLog(error.message);
 
     // Relanzar el error para la respuesta de Express

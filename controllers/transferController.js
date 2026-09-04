@@ -1,18 +1,20 @@
 const pool = require("../config/db");
+const { registrarErrorEnLog } = require("../utils/logger");
+
+// Importo función de validación
 const { validarDatosTransferencia } = require("../helpers/validators");
 
 // Funcion para transferir dinero
 async function transferirDinero(idOrigen, idDestino, monto) {
+  // Validar entradas antes de conectar a la base de datos
+  validarDatosTransferencia(idOrigen, idDestino, monto);
+
   const client = await pool.connect();
+
   try {
-    // valida entradas básicas antes de tocar la BD
-    if (typeof monto !== "number" || monto <= 0 || isNaN(monto)) {
-      throw new Error("El monto a transferir debe ser un número positivo");
-    }
+    await client.query("BEGIN");
 
-    await client.query("BEGIN"); // Inicia transacción
-
-    // Obtiene y bloquea la cuenta de origen
+    // Obtener y bloquear cuenta origen (FOR UPDATE)
     const cuentaOrigenRes = await client.query(
       `SELECT c.saldo, u.nombre 
        FROM cuentas c 
@@ -20,54 +22,39 @@ async function transferirDinero(idOrigen, idDestino, monto) {
        WHERE c.id = $1 FOR UPDATE;`,
       [idOrigen],
     );
-    // Si la cuenta no existe arroja error
+
     if (cuentaOrigenRes.rowCount === 0) {
       throw new Error(`La cuenta de origen (ID ${idOrigen}) no existe`);
     }
 
-    // Obtiene el saldo disponible
     const saldoDisponible = parseFloat(cuentaOrigenRes.rows[0].saldo);
 
-    // Si el saldo es insuficiente arroja error con el detalle
     if (saldoDisponible < monto) {
       throw new Error(
-        `Fondos insuficientes. Saldo disponible: $${saldoDisponible}, intento de transferencia: $${monto}`,
+        `Fondos insuficientes. Saldo disponible: $${saldoDisponible}, intento: $${monto}`,
       );
     }
 
-    // Débito: Si pasa las validaciones, Descuenta el monto de la cuenta de origen
+    // Débito
     const debito = await client.query(
-      `UPDATE cuentas SET saldo = saldo - $1 WHERE id = $2 RETURNING u.nombre, c.saldo 
-       FROM cuentas c 
-       JOIN usuarios u ON c.usuario_id = u.id 
-       WHERE c.id = $2;`,
+      `UPDATE cuentas SET saldo = saldo - $1 WHERE id = $2 
+       RETURNING (SELECT nombre FROM usuarios WHERE id = cuentas.usuario_id), saldo;`,
       [monto, idOrigen],
     );
 
-    // Crédito: Suma el monto a la cuenta de destino
+    // Crédito
     const credito = await client.query(
-      `UPDATE cuentas SET saldo = saldo + $1 WHERE id = $2 RETURNING u.nombre, c.saldo 
-       FROM cuentas c 
-       JOIN usuarios u ON c.usuario_id = u.id 
-       WHERE c.id = $2;`,
+      `UPDATE cuentas SET saldo = saldo + $1 WHERE id = $2 
+       RETURNING (SELECT nombre FROM usuarios WHERE id = cuentas.usuario_id), saldo;`,
       [monto, idDestino],
     );
 
-    // Si la cuenta de destino no existe, arroja error
     if (credito.rowCount === 0) {
       throw new Error(`La cuenta de destino (ID ${idDestino}) no existe`);
     }
 
-    // Confirma la transacción
     await client.query("COMMIT");
 
-    console.log(
-      `Débito aplicado: ${debito.rows[0].nombre} ahora tiene $${debito.rows[0].saldo}`,
-    );
-    console.log(
-      `Crédito aplicado: ${credito.rows[0].nombre} ahora tiene $${credito.rows[0].saldo}`,
-    );
-    console.log("Transferencia realizada con éxito (COMMIT)");
     return {
       exito: true,
       mensaje: "Transferencia realizada con éxito",
@@ -75,12 +62,19 @@ async function transferirDinero(idOrigen, idDestino, monto) {
       destino: credito.rows[0],
     };
   } catch (error) {
-    // Si ocurre cualquier error en la transacción, se revierten las operaciones
-    await client.query("ROLLBACK");
-    console.error(`Error en la transferencia: ${error.message}`);
-    console.error("Se ejecutó el ROLLBACK - ningún cambio se aplicó");
+    // Revertir transacción en base de datos
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackErr) {
+      console.error("Error en ROLLBACK:", rollbackErr.message);
+    }
+
+    // Log en archivo plano (Tarea PLUS :))
+    registrarErrorEnLog(error.message);
+
+    // Relanzar el error para que el controlador capture el estado 500
+    throw error;
   } finally {
-    // Liberar la conexión devuelta al pool
     client.release();
   }
 }

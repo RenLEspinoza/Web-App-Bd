@@ -33,3 +33,15 @@ Separar las actualizaciones en endpoints específicos (o usando PATCH) evita sob
 **Control de excepciones global (500 Internal Server Error):** Bloque try/catch para capturar cualquier falla en la conexión con la base de datos o errores en la ejecución de la consulta SQL, evitando que el servidor colapse.
 
 **Protección de datos sensibles en la respuesta:** Limpieza del objeto retornado mediante rest operator (const { password_hash, ...usuarioProcesado } = result.rows[0]), evitando filtrar contraseñas o hashes hacia el cliente.
+
+# Parte 5
+
+### ✨ SQL manual vs Sequelize
+
+**Usar SQL manual** es como construir las consultas letra por letra escribiendo cadenas de texto, donde hay que cuidar cada comilla y encargarse manualmente de la seguridad para evitar inyecciones de código. **Descubrir Sequelize cambia esa dinámica por completo:** en lugar de pelear con la sintaxis de SQL, interactúas con la base de datos usando métodos u objetos de JavaScript nativos que devuelven resultados listos para manipular. Aunque al inicio cuesta un poco adaptar la lógica para consultas muy complejas, para el trabajo diario agiliza muchísimo el desarrollo y deja el código mil veces más limpio.
+
+### ✨ Ventajas del ORM vs SQL tradicional
+
+Personalmente despues de que me costo bastante tomar ritmo a SQL Manual, puedo decir con claridad que usar ORM (Sequelize) es mucho mas ligero e intuitivo,
+el código en si se ve mucho mas ordenado y facil de leer que con SQL Manual, siento que para el dia a dia Sequelize puede agilizar el desarrollo
+y SQL Manual ofrece control absoluto en detalle.

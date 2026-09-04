@@ -1,6 +1,9 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
+// Sequelize
+const sequelize = require("./config/sequelize");
+
 // Configuración del Pool usando las variables de entorno (.env)
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -22,3 +25,19 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// Verificar conexión a la base de datos con Sequelize antes de levantar el servidor
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log("Conexión con Sequelize establecida correctamente.");
+    app.listen(PORT, () => {
+      console.log(`Servidor ejecutándose en el puerto ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error(
+      "Error al conectar la base de datos mediante Sequelize:",
+      err.message,
+    );
+  });

@@ -11,6 +11,8 @@ const {
   eliminarUsuario,
 } = require("../controllers/usersController");
 
+const { obtenerUsuariosORM } = require("../controllers/userControllerORM");
+
 // --- Operaciones CRUD para usuarios ---
 
 // (READ) Obtener todos los usuarios
@@ -30,5 +32,8 @@ router.patch("/:id/telefono", actualizarTelefono);
 
 // (DELETE)Eliminar usuario
 router.delete("/:id", eliminarUsuario);
+
+// Ruta Users usando ORM (Sequelize)
+router.get("/orm-users", obtenerUsuariosORM);
 
 module.exports = router;
