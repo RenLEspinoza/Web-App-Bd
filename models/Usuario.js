@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
 
-const User = sequelize.define(
-  "User",
+const Usuario = sequelize.define(
+  "Usuario",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -13,7 +13,10 @@ const User = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: false,
       validate: {
-        len: [2, 100],
+        len: {
+          args: [2, 100],
+          msg: "El nombre debe tener entre 2 y 100 caracteres",
+        },
       },
     },
     email: {
@@ -24,13 +27,13 @@ const User = sequelize.define(
         isEmail: true,
       },
     },
-    phone_number: {
+    telefono: {
       type: DataTypes.STRING(20),
       allowNull: true,
     },
-    password_hash: {
+    password: {
       type: DataTypes.STRING(255),
-      allowNull: true,
+      allowNull: false,
     },
   },
   {
@@ -39,4 +42,4 @@ const User = sequelize.define(
   },
 );
 
-module.exports = User;
+module.exports = Usuario;

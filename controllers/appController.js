@@ -4,7 +4,7 @@ const pool = require("../config/db");
 //----------------------------------------------------------------------------
 
 // LLamo a la función desde /loggerMiddleware
-const { registrarAcceso } = require("../middlewares/loggerMiddleware");
+const { registrarAcceso } = require("../utils/logger");
 
 // fn ('/') Renderiza la vista dinámica con Handlebars
 const getHome = (req, res) => {

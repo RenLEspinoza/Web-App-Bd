@@ -3,6 +3,7 @@ require("dotenv").config();
 
 // Sequelize
 const sequelize = require("./config/sequelize");
+const sequelizeModels = require("./models");
 
 // Configuración del Pool usando las variables de entorno (.env)
 const pool = new Pool({
@@ -40,4 +41,17 @@ sequelize
       "Error al conectar la base de datos mediante Sequelize:",
       err.message,
     );
+  });
+
+sequelize
+  .sync({ alter: true })
+  .then(() => {
+    console.log("¡Base de datos y tablas sincronizadas correctamente!");
+
+    app.listen(PORT, () => {
+      console.log(`Servidor corriendo en el puerto ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Error al sincronizar la base de datos:", error);
   });
